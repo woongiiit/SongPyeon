@@ -65,8 +65,14 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS scores_ingredient_total_idx ON scores (ingredient, total DESC);
     CREATE INDEX IF NOT EXISTS scores_ingredient_accuracy_idx ON scores (ingredient, accuracy DESC);
     CREATE INDEX IF NOT EXISTS scores_ingredient_time_idx ON scores (ingredient, time_ms ASC);
-    CREATE INDEX IF NOT EXISTS scores_player_ingredient_idx ON scores (player_id, ingredient);
   `);
+
+  // Existing DBs may predate player_id — add column before any index on it.
+  try {
+    await pool.query(`ALTER TABLE scores ADD COLUMN IF NOT EXISTS player_id TEXT`);
+  } catch (err) {
+    console.warn("player_id column migrate skipped:", err);
+  }
 
   try {
     await pool.query(`ALTER TABLE scores ALTER COLUMN total TYPE REAL USING total::real`);
@@ -76,12 +82,11 @@ export async function initDb() {
   }
 
   try {
-    await pool.query(`ALTER TABLE scores ADD COLUMN IF NOT EXISTS player_id TEXT`);
     await pool.query(
       `CREATE INDEX IF NOT EXISTS scores_player_ingredient_idx ON scores (player_id, ingredient)`
     );
   } catch (err) {
-    console.warn("player_id migrate skipped:", err);
+    console.warn("player_id index migrate skipped:", err);
   }
 }
 
