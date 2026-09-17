@@ -101,7 +101,9 @@ export function computeAccuracy(
 
 export function computeSpeed(timeMs: number): number {
   const t = timeMs / 1000;
-  return clamp(100 - Math.max(0, t - 8) * 4, 0, 100);
+  // 0.1초마다 0.5점 감점 (8초 이하 만점 없음 → 매 0.1초 점수 차별)
+  const tenths = Math.floor(t * 10);
+  return clamp(Math.round((100 - tenths * 0.5) * 10) / 10, 0, 100);
 }
 
 export function computeTotal(accuracy: number, speed: number): number {
