@@ -13,6 +13,8 @@ COPY . .
 # Declaring ARG before RUN invalidates this layer when the key changes.
 ARG VITE_KAKAO_JS_KEY
 ENV VITE_KAKAO_JS_KEY=$VITE_KAKAO_JS_KEY
+ARG VITE_DONATE_URL
+ENV VITE_DONATE_URL=$VITE_DONATE_URL
 RUN npm run build
 
 ENV NODE_ENV=production

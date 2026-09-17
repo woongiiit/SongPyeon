@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_KAKAO_JS_KEY: string;
+  readonly VITE_DONATE_URL: string;
 }
 
 interface ImportMeta {

@@ -283,6 +283,32 @@ a {
   color: var(--kakao-ink);
 }
 
+.btn.donate {
+  background: linear-gradient(180deg, #f0d9a0, #d4b56a);
+  color: #2a1c0a;
+  box-shadow: 0 8px 22px rgba(180, 140, 60, 0.28);
+}
+
+.donate-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 4px;
+}
+
+.donate-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.donate-cta.compact {
+  margin-top: 0;
+}
+
 .btn.pulse {
   animation: pulse 1.6s ease-in-out infinite;
 }
