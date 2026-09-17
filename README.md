@@ -30,9 +30,10 @@ npm run dev
 1. GitHub 저장소 [woongiiit/SongPyeon](https://github.com/woongiiit/SongPyeon) 연결
 2. Postgres 플러그인 추가 → `DATABASE_URL` 자동 주입
 3. 변수 설정
-   - `VITE_KAKAO_JS_KEY` — 카카오 JavaScript 키 (**빌드 시에도 필요**)
+   - `VITE_KAKAO_JS_KEY` — 카카오 JavaScript 키 (**빌드 시 Docker ARG로 주입**, Variables에 설정 후 재배포)
    - `PORT` — Railway가 주입하면 그대로 사용
 4. Dockerfile 기반 배포 (`railway.toml` 참고)
+5. 빌드 로그에서 `RUN npm run build`가 `cached`가 아닌지 확인 (키가 번들에 들어갔는지)
 
 ## 카카오톡 공유
 

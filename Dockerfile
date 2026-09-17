@@ -9,7 +9,10 @@ RUN npm install
 
 COPY . .
 
-# VITE_KAKAO_JS_KEY is read from the build environment (set in Railway Variables)
+# Bake Kakao JS key into the Vite client at build time.
+# Declaring ARG before RUN invalidates this layer when the key changes.
+ARG VITE_KAKAO_JS_KEY
+ENV VITE_KAKAO_JS_KEY=$VITE_KAKAO_JS_KEY
 RUN npm run build
 
 ENV NODE_ENV=production
