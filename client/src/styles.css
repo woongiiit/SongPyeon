@@ -485,8 +485,9 @@ a {
 
 .score-total strong {
   font-family: var(--font-display);
-  font-size: 4rem;
+  font-size: 3.2rem;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .score-grid {
@@ -543,6 +544,59 @@ a {
   margin-top: -4px;
 }
 
+.my-rank-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 231, 180, 0.28);
+  background: rgba(244, 231, 180, 0.08);
+}
+
+.my-rank-label {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--moon);
+}
+
+.my-rank-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.my-rank-stats li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.my-rank-stats li.active {
+  background: rgba(47, 154, 114, 0.22);
+}
+
+.my-rank-stats span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.my-rank-stats strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.my-rank-detail {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .rank-list {
   list-style: none;
   margin: 0 0 auto;
@@ -563,6 +617,11 @@ a {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--line);
+}
+
+.rank-list li.is-me {
+  border-color: rgba(244, 231, 180, 0.45);
+  background: rgba(244, 231, 180, 0.1);
 }
 
 .rank-list .empty {

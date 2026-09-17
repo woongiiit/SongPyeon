@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { submitScore } from "../lib/api";
 import { shareResult } from "../lib/kakao";
-import { formatTimer } from "../lib/scoring";
+import { formatScore, formatTimer } from "../lib/scoring";
 import { INGREDIENT_META } from "../types";
 import { useApp } from "../state";
 
@@ -49,17 +49,17 @@ export function ResultPage() {
 
       <div className="score-hero">
         <div className="score-total">
-          <span>종합</span>
-          <strong>{result.total}</strong>
+          <span>종합 / 1000</span>
+          <strong>{formatScore(result.total)}</strong>
         </div>
         <ul className="score-grid">
           <li>
             <span>정확도</span>
-            <strong>{result.accuracy}</strong>
+            <strong>{formatScore(result.accuracy)}</strong>
           </li>
           <li>
             <span>속도</span>
-            <strong>{result.speed}</strong>
+            <strong>{formatScore(result.speed)}</strong>
           </li>
           <li>
             <span>시간</span>

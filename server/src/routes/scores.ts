@@ -23,7 +23,7 @@ scoresRouter.post("/", async (req, res) => {
       return;
     }
 
-    if (acc < 0 || acc > 100 || tot < 0 || tot > 100 || ms < 0 || ms > 3_600_000) {
+    if (acc < 0 || acc > 1000 || tot < 0 || tot > 1000 || ms < 0 || ms > 3_600_000) {
       res.status(400).json({ error: "score out of range" });
       return;
     }
@@ -36,9 +36,9 @@ scoresRouter.post("/", async (req, res) => {
     const row = await insertScore({
       nickname: name,
       ingredient,
-      accuracy: Math.round(acc * 10) / 10,
+      accuracy: Math.round(acc * 100) / 100,
       timeMs: Math.round(ms),
-      total: Math.round(tot),
+      total: Math.round(tot * 100) / 100,
     });
 
     res.status(201).json(row);

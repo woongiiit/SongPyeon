@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchRankings } from "../lib/api";
-import { formatTimer } from "../lib/scoring";
-import { INGREDIENT_META, type Ingredient, type RankingsResponse, type ScoreEntry } from "../types";
+import { formatScore, formatTimer } from "../lib/scoring";
+import { useApp } from "../state";
+import {
+  INGREDIENT_META,
+  type Ingredient,
+  type MyRank,
+  type RankingsResponse,
+  type ScoreEntry,
+} from "../types";
 
 type RankKind = "byScore" | "bySpeed" | "byTotal";
 
@@ -13,7 +20,14 @@ const KINDS: { id: RankKind; label: string }[] = [
   { id: "bySpeed", label: "속도" },
 ];
 
+function formatMyMeta(kind: RankKind, me: MyRank) {
+  if (kind === "bySpeed") return formatTimer(me.time_ms);
+  if (kind === "byScore") return `${formatScore(me.accuracy)}점`;
+  return `${formatScore(me.total)}점`;
+}
+
 export function RankingPage() {
+  const { displayName } = useApp();
   const [ingredient, setIngredient] = useState<Ingredient>("sesame");
   const [kind, setKind] = useState<RankKind>("byTotal");
   const [data, setData] = useState<RankingsResponse | null>(null);
@@ -24,7 +38,7 @@ export function RankingPage() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    fetchRankings(ingredient)
+    fetchRankings(ingredient, displayName)
       .then((res) => {
         if (!cancelled) setData(res);
       })
@@ -37,9 +51,10 @@ export function RankingPage() {
     return () => {
       cancelled = true;
     };
-  }, [ingredient]);
+  }, [ingredient, displayName]);
 
   const rows: ScoreEntry[] = data?.[kind] ?? [];
+  const myCurrent = data?.me?.[kind] ?? null;
 
   return (
     <section className="page ranking">
@@ -78,27 +93,58 @@ export function RankingPage() {
         ))}
       </div>
 
+      {!loading && !error && data?.me && (
+        <div className="my-rank-card" aria-live="polite">
+          <p className="my-rank-label">{displayName}님의 순위</p>
+          <ul className="my-rank-stats">
+            {KINDS.map((k) => {
+              const mine = data.me?.[k.id];
+              return (
+                <li key={k.id} className={kind === k.id ? "active" : ""}>
+                  <span>{k.label}</span>
+                  <strong>{mine ? `${mine.rank}위` : "—"}</strong>
+                </li>
+              );
+            })}
+          </ul>
+          {myCurrent && (
+            <p className="my-rank-detail">
+              현재 탭 기준 최고 기록 {formatMyMeta(kind, myCurrent)}
+            </p>
+          )}
+          {!myCurrent && (
+            <p className="my-rank-detail muted">이 재료로는 아직 기록이 없어요.</p>
+          )}
+        </div>
+      )}
+
       {loading && <p className="muted">불러오는 중…</p>}
       {error && <p className="form-error">{error}</p>}
 
       {!loading && !error && (
         <ol className="rank-list">
           {rows.length === 0 && <li className="empty">아직 기록이 없어요. 첫 송편을 남겨 보세요!</li>}
-          {rows.map((row, i) => (
-            <li key={row.id}>
-              <span className="rank-pos">{i + 1}</span>
-              <span className="rank-name">{row.nickname}</span>
-              <span className="rank-meta">
-                {kind === "bySpeed" ? (
-                  <>{formatTimer(row.time_ms)}</>
-                ) : kind === "byScore" ? (
-                  <>{row.accuracy}점</>
-                ) : (
-                  <>{row.total}점</>
-                )}
-              </span>
-            </li>
-          ))}
+          {rows.map((row, i) => {
+            const isMe = row.nickname === displayName;
+            return (
+              <li key={row.id} className={isMe ? "is-me" : undefined}>
+                <span className="rank-pos">{i + 1}</span>
+                <span className="rank-name">
+                  {row.nickname}
+                  {isMe ? " (나)" : ""}
+                </span>
+                <span className="rank-meta">
+                  {kind === "bySpeed" ? (
+                    <>{formatTimer(row.time_ms)}</>
+                  ) : kind === "byScore" ? (
+                    <>{formatScore(row.accuracy)}점</>
+                  ) : (
+                    <>{formatScore(row.total)}점</>
+                  )}
+                </span>
+              </li>
+            );
+          })}
         </ol>
       )}
 

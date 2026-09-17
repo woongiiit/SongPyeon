@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getRankings, type Ingredient } from "../db.js";
+import { getMyRanks, getRankings, type Ingredient } from "../db.js";
 
 const INGREDIENTS = new Set<Ingredient>(["sesame", "bean", "chestnut"]);
 
@@ -13,8 +13,15 @@ rankingsRouter.get("/", async (req, res) => {
       return;
     }
 
+    const nickname =
+      typeof req.query.nickname === "string" && req.query.nickname.trim()
+        ? req.query.nickname.trim().slice(0, 20)
+        : "";
+
     const data = await getRankings(ingredient, 20);
-    res.json(data);
+    const me = nickname ? await getMyRanks(ingredient, nickname) : null;
+
+    res.json({ ...data, me });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "failed to load rankings" });

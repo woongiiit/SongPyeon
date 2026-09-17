@@ -1,21 +1,26 @@
 import type { GameResult } from "../types";
 
+export type Point = { x: number; y: number };
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+export function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+export function formatScore(n: number) {
+  return round2(n).toFixed(2);
+}
+
 export function distance(ax: number, ay: number, bx: number, by: number) {
-  const dx = ax - bx;
-  const dy = ay - by;
-  return Math.hypot(dx, dy);
+  return Math.hypot(ax - bx, ay - by);
 }
 
 /** Sample points along an SVG path at roughly equal arc length. */
-export function samplePath(path: Path2D | SVGPathElement, length: number, step = 4): { x: number; y: number }[] {
-  if (!(path instanceof SVGPathElement)) {
-    throw new Error("samplePath requires SVGPathElement");
-  }
-  const points: { x: number; y: number }[] = [];
+export function samplePath(path: SVGPathElement, length: number, step = 2): Point[] {
+  const points: Point[] = [];
   for (let d = 0; d <= length; d += step) {
     const p = path.getPointAtLength(d);
     points.push({ x: p.x, y: p.y });
@@ -29,90 +34,134 @@ export function createOutlineElement(d: string): SVGPathElement {
   const path = document.createElementNS(ns, "path");
   path.setAttribute("d", d);
   svg.appendChild(path);
-  // Keep off-DOM; getTotalLength/getPointAtLength still work
   return path;
 }
 
-function minDistanceToOutline(
-  x: number,
-  y: number,
-  outline: { x: number; y: number }[]
-): number {
+function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number) {
+  const abx = bx - ax;
+  const aby = by - ay;
+  const len2 = abx * abx + aby * aby;
+  if (len2 === 0) return distance(px, py, ax, ay);
+  const t = clamp(((px - ax) * abx + (py - ay) * aby) / len2, 0, 1);
+  return distance(px, py, ax + abx * t, ay + aby * t);
+}
+
+/** Minimum distance from a point to a closed/open polyline. */
+function minDistToPolyline(x: number, y: number, poly: Point[]): number {
+  if (poly.length === 0) return Infinity;
+  if (poly.length === 1) return distance(x, y, poly[0].x, poly[0].y);
   let min = Infinity;
-  for (const p of outline) {
-    const dist = distance(x, y, p.x, p.y);
-    if (dist < min) min = dist;
+  for (let i = 0; i < poly.length - 1; i++) {
+    const a = poly[i];
+    const b = poly[i + 1];
+    const d = distToSegment(x, y, a.x, a.y, b.x, b.y);
+    if (d < min) min = d;
   }
   return min;
 }
 
-/**
- * Coverage: fraction of outline samples that have a stroke point within threshold.
- */
-function coverageRatio(
-  outline: { x: number; y: number }[],
-  strokes: { x: number; y: number }[],
-  threshold = 14
-): number {
-  if (outline.length === 0) return 0;
-  let hit = 0;
-  for (const o of outline) {
-    let ok = false;
-    for (const s of strokes) {
-      if (distance(o.x, o.y, s.x, s.y) <= threshold) {
-        ok = true;
-        break;
-      }
-    }
-    if (ok) hit += 1;
+function polylineLength(poly: Point[]): number {
+  let len = 0;
+  for (let i = 1; i < poly.length; i++) {
+    len += distance(poly[i - 1].x, poly[i - 1].y, poly[i].x, poly[i].y);
   }
-  return hit / outline.length;
+  return len;
 }
 
-export function computeAccuracy(
-  strokePoints: { x: number; y: number }[],
-  outlinePoints: { x: number; y: number }[]
-): number {
-  if (strokePoints.length < 8 || outlinePoints.length === 0) {
+function downsample(points: Point[], maxPoints: number): Point[] {
+  if (points.length <= maxPoints) return points;
+  const step = points.length / maxPoints;
+  const out: Point[] = [];
+  for (let i = 0; i < maxPoints; i++) {
+    out.push(points[Math.min(points.length - 1, Math.floor(i * step))]);
+  }
+  return out;
+}
+
+function mean(values: number[]): number {
+  if (values.length === 0) return 0;
+  let s = 0;
+  for (const v of values) s += v;
+  return s / values.length;
+}
+
+function rms(values: number[]): number {
+  if (values.length === 0) return 0;
+  let s = 0;
+  for (const v of values) s += v * v;
+  return Math.sqrt(s / values.length);
+}
+
+/**
+ * Accuracy 0–1000 (2 decimals).
+ * Combines:
+ * - stroke→outline fit (RMS + mean, continuous)
+ * - outline→stroke coverage (soft exponential, not binary)
+ * - path length similarity
+ */
+export function computeAccuracy(strokePoints: Point[], outlinePoints: Point[]): number {
+  if (strokePoints.length < 8 || outlinePoints.length < 2) {
     return 0;
   }
 
-  // Sample stroke sparsely for speed
-  const sampled =
-    strokePoints.length > 400
-      ? strokePoints.filter((_, i) => i % Math.ceil(strokePoints.length / 400) === 0)
-      : strokePoints;
+  const strokes = downsample(strokePoints, 600);
+  const outline = outlinePoints;
 
-  let sum = 0;
-  for (const p of sampled) {
-    sum += minDistanceToOutline(p.x, p.y, outlinePoints);
-  }
-  const avgDist = sum / sampled.length;
-  let accuracy = clamp(100 - avgDist * 2.5, 0, 100);
+  const strokeDists = strokes.map((p) => minDistToPolyline(p.x, p.y, outline));
+  const outlineDists = outline.map((p) => minDistToPolyline(p.x, p.y, strokes));
 
-  const coverage = coverageRatio(outlinePoints, sampled, 14);
-  if (coverage < 0.6) {
-    const penalty = (0.6 - coverage) * 80;
-    accuracy = clamp(accuracy - penalty, 0, 100);
-  }
+  const strokeMean = mean(strokeDists);
+  const strokeRms = rms(strokeDists);
+  const outlineMean = mean(outlineDists);
 
-  return Math.round(accuracy * 10) / 10;
+  // Soft fit scores in [0, 1] — small distance differences keep spreading scores
+  const fitMean = Math.exp(-strokeMean / 3.2);
+  const fitRms = Math.exp(-strokeRms / 3.8);
+  const fit = 0.55 * fitMean + 0.45 * fitRms;
+
+  // Continuous coverage: each outline sample contributes exp(-d/σ)
+  const coverage =
+    outlineDists.reduce((acc, d) => acc + Math.exp(-d / 5.5), 0) / outlineDists.length;
+
+  const strokeLen = polylineLength(strokes);
+  const outlineLen = polylineLength(outline);
+  const lengthRatio =
+    strokeLen <= 0 || outlineLen <= 0
+      ? 0
+      : clamp(Math.min(strokeLen / outlineLen, outlineLen / strokeLen), 0, 1);
+
+  // Mild penalty if drawing is much shorter/longer than outline
+  const lengthScore = Math.pow(lengthRatio, 0.65);
+
+  // Extra penalty when average outline miss is large (skipped sections)
+  const gapPenalty = clamp(1 - outlineMean / 28, 0, 1);
+
+  const combined = clamp(
+    0.5 * fit + 0.32 * coverage + 0.12 * lengthScore + 0.06 * gapPenalty,
+    0,
+    1
+  );
+
+  return round2(combined * 1000);
 }
 
+/**
+ * Speed 0–1000 (2 decimals).
+ * Continuous with millisecond precision: ~25s → 0.
+ */
 export function computeSpeed(timeMs: number): number {
-  const t = timeMs / 1000;
-  // 0.1초마다 0.5점 감점 (8초 이하 만점 없음 → 매 0.1초 점수 차별)
-  const tenths = Math.floor(t * 10);
-  return clamp(Math.round((100 - tenths * 0.5) * 10) / 10, 0, 100);
+  const t = Math.max(0, timeMs);
+  return round2(clamp(1000 - t * 0.04, 0, 1000));
 }
 
+/** Total 0–1000 (2 decimals): accuracy 70% + speed 30%. */
 export function computeTotal(accuracy: number, speed: number): number {
-  return Math.round(accuracy * 0.7 + speed * 0.3);
+  return round2(accuracy * 0.7 + speed * 0.3);
 }
 
 export function scoreDrawing(
-  strokePoints: { x: number; y: number }[],
-  outlinePoints: { x: number; y: number }[],
+  strokePoints: Point[],
+  outlinePoints: Point[],
   timeMs: number
 ): Pick<GameResult, "accuracy" | "speed" | "total" | "timeMs"> {
   const accuracy = computeAccuracy(strokePoints, outlinePoints);

@@ -55,7 +55,7 @@ export function DrawingBoard({ ingredient, onComplete }: Props) {
 
     const pathEl = createOutlineElement(SONGPYEON_PATH);
     const len = pathEl.getTotalLength();
-    outlinePts.current = samplePath(pathEl, len, 3);
+    outlinePts.current = samplePath(pathEl, len, 1.5);
 
     resize();
     window.addEventListener("resize", resize);

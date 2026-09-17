@@ -49,8 +49,22 @@ export type ScoreEntry = {
   created_at: string;
 };
 
+export type MyRank = {
+  rank: number;
+  accuracy: number;
+  time_ms: number;
+  total: number;
+};
+
+export type MyRanks = {
+  byScore: MyRank | null;
+  bySpeed: MyRank | null;
+  byTotal: MyRank | null;
+};
+
 export type RankingsResponse = {
   byScore: ScoreEntry[];
   bySpeed: ScoreEntry[];
   byTotal: ScoreEntry[];
+  me: MyRanks | null;
 };

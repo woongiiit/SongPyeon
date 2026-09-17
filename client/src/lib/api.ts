@@ -18,8 +18,13 @@ export async function submitScore(body: {
   return res.json();
 }
 
-export async function fetchRankings(ingredient: Ingredient): Promise<RankingsResponse> {
-  const res = await fetch(`/api/rankings?ingredient=${ingredient}`);
+export async function fetchRankings(
+  ingredient: Ingredient,
+  nickname?: string
+): Promise<RankingsResponse> {
+  const params = new URLSearchParams({ ingredient });
+  if (nickname?.trim()) params.set("nickname", nickname.trim());
+  const res = await fetch(`/api/rankings?${params}`);
   if (!res.ok) {
     throw new Error("랭킹을 불러오지 못했습니다");
   }

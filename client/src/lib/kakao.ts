@@ -35,9 +35,9 @@ export function shareResult(result: GameResult, nickname: string) {
   window.Kakao.Share.sendDefault({
     objectType: "feed",
     content: {
-      title: `${nickname}님의 ${meta.label} 송편 — ${result.total}점`,
-      description: `정확도 ${result.accuracy}점 · ${timeSec}초 · 추석에 송편 한 번 빚어보세요`,
-      imageUrl: `${url}/og-songpyeon.svg`,
+      title: `${nickname}님의 ${meta.label} 송편 — ${result.total.toFixed(2)}점`,
+      description: `정확도 ${result.accuracy.toFixed(2)} · 속도 ${result.speed.toFixed(2)} · ${timeSec}초`,
+      imageUrl: `${url}/og-songpyeon.png`,
       link: {
         mobileWebUrl: url,
         webUrl: url,
