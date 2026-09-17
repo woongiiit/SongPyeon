@@ -9,9 +9,7 @@ RUN npm install
 
 COPY . .
 
-ARG VITE_KAKAO_JS_KEY
-ENV VITE_KAKAO_JS_KEY=$VITE_KAKAO_JS_KEY
-
+# VITE_KAKAO_JS_KEY is read from the build environment (set in Railway Variables)
 RUN npm run build
 
 ENV NODE_ENV=production
