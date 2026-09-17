@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { DonateCta } from "../components/DonateCta";
 import { useApp } from "../state";
 
 export function HomePage() {
@@ -49,7 +48,6 @@ export function HomePage() {
         <Link to="/ranking" className="btn ghost wide">
           랭킹 확인
         </Link>
-        <DonateCta />
       </form>
     </section>
   );

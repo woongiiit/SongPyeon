@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { DonateCta } from "../components/DonateCta";
 import { fetchRankings } from "../lib/api";
 import { formatScore, formatTimer } from "../lib/scoring";
 import { useApp } from "../state";
@@ -151,6 +152,8 @@ export function RankingPage() {
       <Link to="/" className="btn ghost wide">
         홈으로
       </Link>
+
+      <DonateCta />
     </section>
   );
 }

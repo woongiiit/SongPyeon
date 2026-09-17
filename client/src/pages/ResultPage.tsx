@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { DonateCta } from "../components/DonateCta";
 import { submitScore } from "../lib/api";
 import { shareResult } from "../lib/kakao";
 import { formatScore, formatTimer } from "../lib/scoring";
@@ -92,8 +91,6 @@ export function ResultPage() {
       <button type="button" className="btn ghost wide" onClick={() => navigate("/ranking")}>
         랭킹 보기
       </button>
-
-      <DonateCta />
     </section>
   );
 }

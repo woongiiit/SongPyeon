@@ -289,24 +289,27 @@ a {
   box-shadow: 0 8px 22px rgba(180, 140, 60, 0.28);
 }
 
-.donate-cta {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
-  padding-top: 4px;
+.btn.donate.fab {
+  width: auto;
+  max-width: min(200px, 52vw);
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
 }
 
-.donate-copy {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  text-align: center;
+.donate-fab {
+  position: fixed;
+  right: max(14px, calc(50% - 215px + 14px));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 20;
 }
 
-.donate-cta.compact {
-  margin-top: 0;
+.page.ranking {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
 .btn.pulse {
