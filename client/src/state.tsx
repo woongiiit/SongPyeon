@@ -5,12 +5,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { getPlayerId } from "./lib/playerId";
 import type { GameResult, Ingredient } from "./types";
 
 type AppState = {
   nickname: string;
   setNickname: (v: string) => void;
   displayName: string;
+  playerId: string;
   ingredient: Ingredient | null;
   setIngredient: (v: Ingredient | null) => void;
   result: GameResult | null;
@@ -24,6 +26,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [nickname, setNickname] = useState("");
   const [ingredient, setIngredient] = useState<Ingredient | null>(null);
   const [result, setResult] = useState<GameResult | null>(null);
+  const [playerId] = useState(() => getPlayerId());
 
   const displayName = nickname.trim() || "익명송편";
 
@@ -32,6 +35,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       nickname,
       setNickname,
       displayName,
+      playerId,
       ingredient,
       setIngredient,
       result,
@@ -41,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setResult(null);
       },
     }),
-    [nickname, displayName, ingredient, result]
+    [nickname, displayName, playerId, ingredient, result]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

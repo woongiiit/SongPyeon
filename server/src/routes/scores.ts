@@ -3,11 +3,18 @@ import { insertScore, type Ingredient } from "../db.js";
 
 const INGREDIENTS = new Set<Ingredient>(["sesame", "bean", "chestnut"]);
 
+function normalizePlayerId(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const id = raw.trim().slice(0, 64);
+  if (!id || id.length < 8) return null;
+  return id;
+}
+
 export const scoresRouter = Router();
 
 scoresRouter.post("/", async (req, res) => {
   try {
-    const { nickname, ingredient, accuracy, timeMs, total } = req.body ?? {};
+    const { nickname, playerId, ingredient, accuracy, timeMs, total } = req.body ?? {};
 
     if (!INGREDIENTS.has(ingredient)) {
       res.status(400).json({ error: "invalid ingredient" });
@@ -17,9 +24,15 @@ scoresRouter.post("/", async (req, res) => {
     const acc = Number(accuracy);
     const ms = Number(timeMs);
     const tot = Number(total);
+    const pid = normalizePlayerId(playerId);
 
     if (![acc, ms, tot].every((n) => Number.isFinite(n))) {
       res.status(400).json({ error: "invalid score fields" });
+      return;
+    }
+
+    if (!pid) {
+      res.status(400).json({ error: "invalid playerId" });
       return;
     }
 
@@ -35,6 +48,7 @@ scoresRouter.post("/", async (req, res) => {
 
     const row = await insertScore({
       nickname: name,
+      playerId: pid,
       ingredient,
       accuracy: Math.round(acc * 100) / 100,
       timeMs: Math.round(ms),

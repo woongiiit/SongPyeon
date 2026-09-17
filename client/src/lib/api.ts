@@ -2,6 +2,7 @@ import type { Ingredient, RankingsResponse, ScoreEntry } from "../types";
 
 export async function submitScore(body: {
   nickname?: string;
+  playerId: string;
   ingredient: Ingredient;
   accuracy: number;
   timeMs: number;
@@ -20,10 +21,10 @@ export async function submitScore(body: {
 
 export async function fetchRankings(
   ingredient: Ingredient,
-  nickname?: string
+  playerId?: string
 ): Promise<RankingsResponse> {
   const params = new URLSearchParams({ ingredient });
-  if (nickname?.trim()) params.set("nickname", nickname.trim());
+  if (playerId?.trim()) params.set("playerId", playerId.trim());
   const res = await fetch(`/api/rankings?${params}`);
   if (!res.ok) {
     throw new Error("랭킹을 불러오지 못했습니다");

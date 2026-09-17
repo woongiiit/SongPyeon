@@ -28,7 +28,7 @@ function formatMyMeta(kind: RankKind, me: MyRank) {
 }
 
 export function RankingPage() {
-  const { displayName } = useApp();
+  const { displayName, playerId } = useApp();
   const [ingredient, setIngredient] = useState<Ingredient>("sesame");
   const [kind, setKind] = useState<RankKind>("byTotal");
   const [data, setData] = useState<RankingsResponse | null>(null);
@@ -39,7 +39,7 @@ export function RankingPage() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    fetchRankings(ingredient, displayName)
+    fetchRankings(ingredient, playerId)
       .then((res) => {
         if (!cancelled) setData(res);
       })
@@ -52,7 +52,7 @@ export function RankingPage() {
     return () => {
       cancelled = true;
     };
-  }, [ingredient, displayName]);
+  }, [ingredient, playerId]);
 
   const rows: ScoreEntry[] = data?.[kind] ?? [];
   const myCurrent = data?.me?.[kind] ?? null;
@@ -126,7 +126,7 @@ export function RankingPage() {
         <ol className="rank-list">
           {rows.length === 0 && <li className="empty">아직 기록이 없어요. 첫 송편을 남겨 보세요!</li>}
           {rows.map((row, i) => {
-            const isMe = row.nickname === displayName;
+            const isMe = Boolean(row.player_id && row.player_id === playerId);
             return (
               <li key={row.id} className={isMe ? "is-me" : undefined}>
                 <span className="rank-pos">{i + 1}</span>

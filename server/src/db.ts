@@ -7,6 +7,7 @@ export type Ingredient = "sesame" | "bean" | "chestnut";
 export type ScoreRow = {
   id: number;
   nickname: string;
+  player_id: string | null;
   ingredient: Ingredient;
   accuracy: number;
   time_ms: number;
@@ -23,6 +24,19 @@ let pool: pg.Pool | null = null;
 let memoryScores: MemoryScore[] = [];
 let memoryId = 1;
 let useMemory = false;
+
+function mapRow(r: MemoryScore): ScoreRow {
+  return {
+    id: r.id,
+    nickname: r.nickname,
+    player_id: r.player_id,
+    ingredient: r.ingredient,
+    accuracy: r.accuracy,
+    time_ms: r.time_ms,
+    total: r.total,
+    created_at: r.created_at.toISOString(),
+  };
+}
 
 export async function initDb() {
   const url = process.env.DATABASE_URL;
@@ -41,6 +55,7 @@ export async function initDb() {
     CREATE TABLE IF NOT EXISTS scores (
       id SERIAL PRIMARY KEY,
       nickname TEXT NOT NULL DEFAULT '익명송편',
+      player_id TEXT,
       ingredient TEXT NOT NULL CHECK (ingredient IN ('sesame', 'bean', 'chestnut')),
       accuracy REAL NOT NULL,
       time_ms INTEGER NOT NULL,
@@ -50,19 +65,29 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS scores_ingredient_total_idx ON scores (ingredient, total DESC);
     CREATE INDEX IF NOT EXISTS scores_ingredient_accuracy_idx ON scores (ingredient, accuracy DESC);
     CREATE INDEX IF NOT EXISTS scores_ingredient_time_idx ON scores (ingredient, time_ms ASC);
+    CREATE INDEX IF NOT EXISTS scores_player_ingredient_idx ON scores (player_id, ingredient);
   `);
 
-  // Existing installs may still have INTEGER total — promote to REAL for 2-decimal scores.
   try {
     await pool.query(`ALTER TABLE scores ALTER COLUMN total TYPE REAL USING total::real`);
     await pool.query(`ALTER TABLE scores ALTER COLUMN accuracy TYPE REAL USING accuracy::real`);
   } catch (err) {
     console.warn("score column type migrate skipped:", err);
   }
+
+  try {
+    await pool.query(`ALTER TABLE scores ADD COLUMN IF NOT EXISTS player_id TEXT`);
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS scores_player_ingredient_idx ON scores (player_id, ingredient)`
+    );
+  } catch (err) {
+    console.warn("player_id migrate skipped:", err);
+  }
 }
 
 export async function insertScore(input: {
   nickname: string;
+  playerId: string;
   ingredient: Ingredient;
   accuracy: number;
   timeMs: number;
@@ -72,6 +97,7 @@ export async function insertScore(input: {
     const row: MemoryScore = {
       id: memoryId++,
       nickname: input.nickname,
+      player_id: input.playerId,
       ingredient: input.ingredient,
       accuracy: input.accuracy,
       time_ms: input.timeMs,
@@ -79,17 +105,21 @@ export async function insertScore(input: {
       created_at: new Date(),
     };
     memoryScores.push(row);
-    return {
-      ...row,
-      created_at: row.created_at.toISOString(),
-    };
+    return mapRow(row);
   }
 
   const result = await pool.query<ScoreRow>(
-    `INSERT INTO scores (nickname, ingredient, accuracy, time_ms, total)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, nickname, ingredient, accuracy, time_ms, total, created_at`,
-    [input.nickname, input.ingredient, input.accuracy, input.timeMs, input.total]
+    `INSERT INTO scores (nickname, player_id, ingredient, accuracy, time_ms, total)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, nickname, player_id, ingredient, accuracy, time_ms, total, created_at`,
+    [
+      input.nickname,
+      input.playerId,
+      input.ingredient,
+      input.accuracy,
+      input.timeMs,
+      input.total,
+    ]
   );
   return result.rows[0];
 }
@@ -97,45 +127,41 @@ export async function insertScore(input: {
 export async function getRankings(ingredient: Ingredient, limit = 20) {
   if (useMemory || !pool) {
     const filtered = memoryScores.filter((s) => s.ingredient === ingredient);
-    const map = (rows: MemoryScore[]) =>
-      rows.map((r) => ({
-        id: r.id,
-        nickname: r.nickname,
-        ingredient: r.ingredient,
-        accuracy: r.accuracy,
-        time_ms: r.time_ms,
-        total: r.total,
-        created_at: r.created_at.toISOString(),
-      }));
 
     return {
-      byScore: map(
-        [...filtered].sort((a, b) => b.accuracy - a.accuracy || a.time_ms - b.time_ms).slice(0, limit)
-      ),
-      bySpeed: map(
-        [...filtered].sort((a, b) => a.time_ms - b.time_ms || b.accuracy - a.accuracy).slice(0, limit)
-      ),
-      byTotal: map(
-        [...filtered].sort((a, b) => b.total - a.total || a.time_ms - b.time_ms).slice(0, limit)
-      ),
+      byScore: filtered
+        .slice()
+        .sort((a, b) => b.accuracy - a.accuracy || a.time_ms - b.time_ms)
+        .slice(0, limit)
+        .map(mapRow),
+      bySpeed: filtered
+        .slice()
+        .sort((a, b) => a.time_ms - b.time_ms || b.accuracy - a.accuracy)
+        .slice(0, limit)
+        .map(mapRow),
+      byTotal: filtered
+        .slice()
+        .sort((a, b) => b.total - a.total || a.time_ms - b.time_ms)
+        .slice(0, limit)
+        .map(mapRow),
     };
   }
 
   const [byScore, bySpeed, byTotal] = await Promise.all([
     pool.query<ScoreRow>(
-      `SELECT id, nickname, ingredient, accuracy, time_ms, total, created_at
+      `SELECT id, nickname, player_id, ingredient, accuracy, time_ms, total, created_at
        FROM scores WHERE ingredient = $1
        ORDER BY accuracy DESC, time_ms ASC LIMIT $2`,
       [ingredient, limit]
     ),
     pool.query<ScoreRow>(
-      `SELECT id, nickname, ingredient, accuracy, time_ms, total, created_at
+      `SELECT id, nickname, player_id, ingredient, accuracy, time_ms, total, created_at
        FROM scores WHERE ingredient = $1
        ORDER BY time_ms ASC, accuracy DESC LIMIT $2`,
       [ingredient, limit]
     ),
     pool.query<ScoreRow>(
-      `SELECT id, nickname, ingredient, accuracy, time_ms, total, created_at
+      `SELECT id, nickname, player_id, ingredient, accuracy, time_ms, total, created_at
        FROM scores WHERE ingredient = $1
        ORDER BY total DESC, time_ms ASC LIMIT $2`,
       [ingredient, limit]
@@ -163,12 +189,12 @@ export type MyRanks = {
 };
 
 function rankAmong(
-  sorted: MemoryScore[],
+  all: MemoryScore[],
   mine: MemoryScore | undefined,
   betterThan: (other: MemoryScore, me: MemoryScore) => boolean
 ): MyRank | null {
   if (!mine) return null;
-  const rank = sorted.filter((s) => betterThan(s, mine)).length + 1;
+  const rank = all.filter((s) => betterThan(s, mine)).length + 1;
   return {
     rank,
     accuracy: mine.accuracy,
@@ -177,12 +203,15 @@ function rankAmong(
   };
 }
 
-export async function getMyRanks(ingredient: Ingredient, nickname: string): Promise<MyRanks> {
-  const name = nickname.trim() || "익명송편";
+export async function getMyRanks(ingredient: Ingredient, playerId: string): Promise<MyRanks> {
+  const pid = playerId.trim();
+  if (!pid) {
+    return { byScore: null, bySpeed: null, byTotal: null };
+  }
 
   if (useMemory || !pool) {
     const filtered = memoryScores.filter((s) => s.ingredient === ingredient);
-    const mine = filtered.filter((s) => s.nickname === name);
+    const mine = filtered.filter((s) => s.player_id === pid);
     if (mine.length === 0) {
       return { byScore: null, bySpeed: null, byTotal: null };
     }
@@ -215,7 +244,7 @@ export async function getMyRanks(ingredient: Ingredient, nickname: string): Prom
       `WITH best AS (
          SELECT accuracy, time_ms, total
          FROM scores
-         WHERE ingredient = $1 AND nickname = $2
+         WHERE ingredient = $1 AND player_id = $2
          ORDER BY accuracy DESC, time_ms ASC
          LIMIT 1
        )
@@ -226,13 +255,13 @@ export async function getMyRanks(ingredient: Ingredient, nickname: string): Prom
          ) AS rank,
          best.accuracy, best.time_ms, best.total
        FROM best`,
-      [ingredient, name]
+      [ingredient, pid]
     ),
     pool.query<{ rank: string; accuracy: number; time_ms: number; total: number }>(
       `WITH best AS (
          SELECT accuracy, time_ms, total
          FROM scores
-         WHERE ingredient = $1 AND nickname = $2
+         WHERE ingredient = $1 AND player_id = $2
          ORDER BY time_ms ASC, accuracy DESC
          LIMIT 1
        )
@@ -243,13 +272,13 @@ export async function getMyRanks(ingredient: Ingredient, nickname: string): Prom
          ) AS rank,
          best.accuracy, best.time_ms, best.total
        FROM best`,
-      [ingredient, name]
+      [ingredient, pid]
     ),
     pool.query<{ rank: string; accuracy: number; time_ms: number; total: number }>(
       `WITH best AS (
          SELECT accuracy, time_ms, total
          FROM scores
-         WHERE ingredient = $1 AND nickname = $2
+         WHERE ingredient = $1 AND player_id = $2
          ORDER BY total DESC, time_ms ASC
          LIMIT 1
        )
@@ -260,7 +289,7 @@ export async function getMyRanks(ingredient: Ingredient, nickname: string): Prom
          ) AS rank,
          best.accuracy, best.time_ms, best.total
        FROM best`,
-      [ingredient, name]
+      [ingredient, pid]
     ),
   ]);
 

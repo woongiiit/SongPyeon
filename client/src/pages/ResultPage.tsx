@@ -7,7 +7,7 @@ import { INGREDIENT_META } from "../types";
 import { useApp } from "../state";
 
 export function ResultPage() {
-  const { result, displayName, resetGame } = useApp();
+  const { result, displayName, playerId, resetGame } = useApp();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -19,6 +19,7 @@ export function ResultPage() {
       try {
         await submitScore({
           nickname: displayName,
+          playerId,
           ingredient: result.ingredient,
           accuracy: result.accuracy,
           timeMs: result.timeMs,
@@ -32,7 +33,7 @@ export function ResultPage() {
     return () => {
       cancelled = true;
     };
-  }, [result, displayName, saved]);
+  }, [result, displayName, playerId, saved]);
 
   if (!result) {
     return <Navigate to="/" replace />;

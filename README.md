@@ -42,6 +42,7 @@ npm run dev
 2. **앱 > 플랫폼 / 제품 링크**에 Railway 웹 도메인 등록
 3. `VITE_KAKAO_JS_KEY`를 Railway에 설정 후 재배포
 4. 링크 미리보기 이미지가 안 바뀌면 [카카오 디버거/캐시 초기화](https://developers.kakao.com/tool/debugger/sharing)에 URL을 넣고 스크랩 정보를 갱신
+5. 공유 카드/버튼을 눌러도 홈이 안 열리면, 콘솔에 등록한 웹 도메인이 배포 URL(`https://songpyeonbitgi.up.railway.app`)과 일치하는지 확인
 
 ## 스택
 

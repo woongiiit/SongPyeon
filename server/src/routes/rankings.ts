@@ -13,13 +13,13 @@ rankingsRouter.get("/", async (req, res) => {
       return;
     }
 
-    const nickname =
-      typeof req.query.nickname === "string" && req.query.nickname.trim()
-        ? req.query.nickname.trim().slice(0, 20)
+    const playerId =
+      typeof req.query.playerId === "string" && req.query.playerId.trim()
+        ? req.query.playerId.trim().slice(0, 64)
         : "";
 
     const data = await getRankings(ingredient, 20);
-    const me = nickname ? await getMyRanks(ingredient, nickname) : null;
+    const me = playerId ? await getMyRanks(ingredient, playerId) : null;
 
     res.json({ ...data, me });
   } catch (err) {

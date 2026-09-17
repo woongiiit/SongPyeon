@@ -42,6 +42,7 @@ export type GameResult = {
 export type ScoreEntry = {
   id: number;
   nickname: string;
+  player_id: string | null;
   ingredient: Ingredient;
   accuracy: number;
   time_ms: number;
