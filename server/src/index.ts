@@ -6,6 +6,7 @@ import { initDb } from "./db.js";
 import { rankingsRouter } from "./routes/rankings.js";
 import { scoresRouter } from "./routes/scores.js";
 
+// Trigger Railway server rebuild to deploy client/dist with AdSense
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 8080;
 
