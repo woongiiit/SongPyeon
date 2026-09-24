@@ -22,3 +22,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 CMD ["node", "server/dist/index.js"]
+
+# Force rebuild to include client/index.html with Google AdSense (Sep 2026)
